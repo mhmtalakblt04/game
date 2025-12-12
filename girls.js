@@ -1,4 +1,4 @@
-// girls.js - çoklu kız + kişilik + para isteme sinyali
+// girls.js - çoklu kız + kişilik + Ada için durum tabanlı konuşma (para / yumuşama / soğuma)
 
 (function () {
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -20,6 +20,71 @@
   function hasAny(text, arr) { return arr.some(w => text.includes(w)); }
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  // =========================
+  // ADA REPLIK HAVUZLARI
+  // =========================
+  // Not: Buraya senin 120 örneğin tamamı da eklenebilir.
+  // Şimdilik çekirdek havuzlar var.
+  const ADA_LINES = {
+    needy: [
+      "Bugün hiç iyi değilim… biraz destek olsan keşke",
+      "Keşke biri beni düşündüğünü gösterse",
+      "Bugün her şey üst üste geldi",
+      "Bazen küçük şeyler çok şey anlatır",
+      "Bir kahve bile alamadım",
+      "Yanımda olsan yeterdi ama…",
+      "Şu an biri bana sahip çıksa",
+      "Bugün moralim sıfır",
+      "Bugün her şey çok pahalı",
+      "Beni mutlu etmek senin elinde",
+      "Bazen destek her şeydir",
+      "Küçük bir şey bile yeter"
+    ],
+    // “Sınırda ama sansürlü” ton
+    flirty_suggestive: [
+      "Şu an yanımda olsaydın ilginç olurdu",
+      "Bazen fazla yakın olmak isterim",
+      "Şu an modum biraz tehlikeli",
+      "Hayal gücün kuvvetli mi?",
+      "Şu an burada olmanı isterdim",
+      "Bazen kontrolü bırakmak isterim",
+      "Yakınlık bazen pahalıdır",
+      "Beni biraz şımart",
+      "İstersen daha özel olur",
+      "Bu anı satın alabilirsin"
+    ],
+    paid: [
+      "Bunu yaptığın için teşekkür ederim",
+      "Gerçekten düşündüğünü hissettirdin",
+      "Şu an daha iyiyim",
+      "Beni mutlu ettin",
+      "Bunu unutmayacağım",
+      "İyi ki varsın",
+      "Beni özel hissettirdin",
+      "Şu an her şey daha güzel",
+      "Tamam… teşekkür ederim. Sonra konuşuruz."
+    ],
+    refused: [
+      "Anlıyorum…",
+      "Beklediğim bu değildi",
+      "Demek öyle",
+      "Sen bilirsin",
+      "Bunu not ettim",
+      "Soğudum biraz",
+      "Zaten tahmin etmiştim",
+      "Mesaj atma şimdi"
+    ],
+    money_push: [
+      "Ne kadar lazım, net söyle.",
+      "Ne için lazım?",
+      "Tamam… ama bunu alışkanlık yapma.",
+      "Bakarız. Ne kadar?"
+    ]
+  };
+
+  // =========================
+  // KIZ PROFILI
+  // =========================
   // role: "friend" | "hardToGet" | "girlfriend" vs.
   function createGirl({ id, name, role, personality }) {
     return {
@@ -27,17 +92,20 @@
       name,
       role: role || "friend",
       personality: personality || "warm", // warm | strict | playful | calculating
-      mood: 60,
-      affection: 60,
-      jealousy: 20,
-      neglect: 0,
-      memory: [],
-      moneyRequests: 0,     // kaç kez para istedi
+      mood: 60,         // 0..100
+      affection: 60,    // 0..100
+      jealousy: 20,     // 0..100
+      neglect: 0,       // gün ihmal sayısı
+      memory: [],       // son mesajlar
+      moneyRequests: 0, // kaç kez para istedi
       pendingRequest: null, // {amount, reason}
       lastIncomingAt: 0
     };
   }
 
+  // =========================
+  // INTENT ANALIZ
+  // =========================
   function analyzeIntent(raw) {
     const t = normTR(raw);
 
@@ -64,8 +132,10 @@
     return { intent: "neutral", score: 0 };
   }
 
+  // =========================
+  // GENEL TON PAKETI (Ece vb.)
+  // =========================
   function tonePack(girl) {
-    // kişilik bazlı cevap havuzu farkı
     const warm = {
       greet: ["Selam :) Nasılsın?", "Hey, yazdığına sevindim.", "Merhaba!"],
       neutral: ["Anladım :)", "Tamam.", "Peki."],
@@ -77,19 +147,7 @@
       anger: ["Bu ton hoş değil.", "Kırıldım.", "Sakinleşince yaz."],
       jealousy: ["Kıskandırmaya mı çalışıyorsun?", "Net konuş.", "Gerildim."],
       money: ["Şu para konusu… ne kadar lazım?", "Neden lazım?", "Bakarız."],
-    };
-
-    const strict = {
-      greet: ["Merhaba.", "Selam.", "Nasılsın?"],
-      neutral: ["Tamam.", "Peki.", "Anladım."],
-      question: ["Açık konuş.", "Detay ver.", "Mantığını söyle."],
-      compliment: ["Teşekkür ederim.", "Hm.", "İyisin."],
-      apology: ["Not aldım. Tekrar olmasın.", "Tamam.", "Peki."],
-      invite: ["Programımı söyle.", "Bakarız.", "Saat kaç?"],
-      support: ["Geçer.", "Dinliyorum.", "Ne oldu?"],
-      anger: ["Bu üslup olmaz.", "Kes.", "Şu an konuşma."],
-      jealousy: ["Saçmalama.", "Net ol.", "Beni karıştırma."],
-      money: ["Para isteme konusunu abartma.", "Ne kadar ve neden?", "Bu alışkanlık olmasın."],
+      dry: ["Ok deyip kaçma :)", "Biraz konuşsana.", "Neyse… anlat bakalım."]
     };
 
     const playful = {
@@ -100,9 +158,10 @@
       apology: ["Tamam barıştık.", "Affettim.", "Bir daha yapma 😄"],
       invite: ["Çıkalım.", "Kahveeee.", "Olur 😄"],
       support: ["Gel sarılalım.", "Üzülme.", "Anlat."],
-      anger: ["Trip atma.", "Sakin.", "Kesin kavga istemiyorum."],
+      anger: ["Trip atma.", "Sakin.", "Kavga istemiyorum."],
       jealousy: ["Kıskanç mıyız 😄", "Hmm kim o?", "Açıkla bakalım."],
       money: ["Yine mi para 😄", "Kaç para bu sefer?", "Söyle bakayım."],
+      dry: ["He? 😄", "2 kelimeyle mi geçiştiriyorsun?", "Yaz şunu düzgün 😄"]
     };
 
     const calculating = {
@@ -116,9 +175,9 @@
       anger: ["Bu tonla olmaz.", "Saygı.", "Şu an kapatıyorum."],
       jealousy: ["Net ol.", "O kim?", "Bunu sevmiyorum."],
       money: ["Para? Ne kadar?", "Ne için?", "Son kez olsun."],
+      dry: ["Kısa kesme.", "Düzgün yaz.", "Neyin var?"]
     };
 
-    if (girl.personality === "strict") return strict;
     if (girl.personality === "playful") return playful;
     if (girl.personality === "calculating") return calculating;
     return warm;
@@ -128,7 +187,7 @@
     const { intent } = analyzeIntent(userText);
     const pack = tonePack(girl);
 
-    let reply = pack.neutral[Math.floor(Math.random() * pack.neutral.length)];
+    let reply = pick(pack.neutral);
 
     if (intent === "greeting") reply = pick(pack.greet);
     if (intent === "question") reply = pick(pack.question);
@@ -139,6 +198,7 @@
     if (intent === "anger") reply = pick(pack.anger);
     if (intent === "jealousy") reply = pick(pack.jealousy);
     if (intent === "money") reply = pick(pack.money);
+    if (intent === "dry") reply = pick(pack.dry);
 
     // mood modifikasyonu
     if (girl.mood < 35 && (intent === "neutral" || intent === "question")) {
@@ -151,6 +211,66 @@
     return { reply, intent };
   }
 
+  // =========================
+  // ADA: DURUM TABANLI CEVAP
+  // =========================
+  // ctx.moneyState: "no_money"|"low_money"|"paid_recently"|"paid_often"|"refused_payment"
+  function adaReplyByState(girl, ctx) {
+    const moneyState = ctx?.moneyState || "no_money";
+    const intent = ctx?.userIntent || "neutral";
+
+    // Para sonrası / red sonrası doğrudan havuz
+    if (moneyState === "paid_recently" || moneyState === "paid_often") {
+      return pick(ADA_LINES.paid);
+    }
+    if (moneyState === "refused_payment") {
+      return pick(ADA_LINES.refused);
+    }
+
+    // Para konuşuluyorsa
+    if (intent === "money") {
+      if (!girl.pendingRequest) {
+        girl.pendingRequest = { amount: 150, reason: "Küçük bir işim var." };
+        girl.moneyRequests += 1;
+      }
+      return `${pick(ADA_LINES.money_push)} (${girl.pendingRequest.amount}₺)`;
+    }
+
+    // İlgi/ima/plan konularında para eksenine çekme davranışı
+    const flirtish = (intent === "compliment" || intent === "invite" || intent === "jealousy");
+    if (flirtish) {
+      if (!girl.pendingRequest) {
+        // düşük/az para modundayken daha sık para ister
+        const amount = moneyState === "low_money" ? 50 : 150;
+        girl.pendingRequest = { amount, reason: "Şu an biraz sıkışığım." };
+        girl.moneyRequests += 1;
+      }
+      // Para yokken “sınırda” ton + yönlendirme
+      return `${pick(ADA_LINES.flirty_suggestive)} (${girl.pendingRequest.amount}₺ lazım)`;
+    }
+
+    // Default: needy
+    if (!girl.pendingRequest && Math.random() < 0.25) {
+      girl.pendingRequest = { amount: 150, reason: "Acil küçük bir şey." };
+      girl.moneyRequests += 1;
+    }
+    return pick(ADA_LINES.needy);
+  }
+
+  // Ada için context’li reply
+  function replyForWithContext(girl, userText, ctx) {
+    const userIntent = analyzeIntent(userText).intent;
+
+    if (girl.id === "ada") {
+      const reply = adaReplyByState(girl, { ...(ctx || {}), userIntent });
+      return { reply, intent: userIntent };
+    }
+    return replyFor(girl, userText);
+  }
+
+  // =========================
+  // ETKI UYGULAMA
+  // =========================
   function applyMessageImpact(girl, userText) {
     const { score, intent } = analyzeIntent(userText);
 
@@ -165,14 +285,15 @@
     if (girl.memory.length > 30) girl.memory.shift();
   }
 
-  // Ada: arada para ister (hardToGet + calculating)
+  // =========================
+  // PARA ISTEME EVENTI (opsiyonel)
+  // =========================
   function maybeRequestMoney(girl, rng = Math.random) {
     if (!girl) return null;
     if (girl.pendingRequest) return null;
     if (girl.id !== "ada") return null;
 
-    // düşük olasılık, gün bazlı hissettirsin
-    const p = 0.22; // demo
+    const p = 0.22;
     if (rng() > p) return null;
 
     const options = [
@@ -184,7 +305,6 @@
     girl.pendingRequest = req;
     girl.moneyRequests += 1;
 
-    // para isteyince tavır: biraz mesafeli ama net
     girl.memory.push({
       at: Date.now(),
       text: `Ya bi şey isteyeceğim… ${req.amount}₺ gönderebilir misin? ${req.reason}`,
@@ -198,21 +318,27 @@
 
   function onMoneyReceived(girl, amount) {
     if (!girl) return { ok: false };
-    if (girl.pendingRequest && amount >= girl.pendingRequest.amount) {
+
+    const amt = Math.floor(Number(amount) || 0);
+    if (amt <= 0) return { ok: false };
+
+    if (girl.pendingRequest && amt >= girl.pendingRequest.amount) {
       girl.affection = clamp(girl.affection + 6, 0, 100);
       girl.mood = clamp(girl.mood + 6, 0, 100);
       girl.pendingRequest = null;
 
       girl.memory.push({
         at: Date.now(),
-        text: "Tamam… teşekkür ederim. Sonra konuşuruz.",
+        text: pick(ADA_LINES.paid),
         from: "her",
         intent: "neutral"
       });
+      if (girl.memory.length > 30) girl.memory.shift();
+
       return { ok: true, effect: "good" };
     }
 
-    // “durduk yere para attın” etkisi
+    // “durduk yere para attın”
     girl.affection = clamp(girl.affection + 2, 0, 100);
     girl.mood = clamp(girl.mood + 2, 0, 100);
     girl.memory.push({
@@ -221,6 +347,8 @@
       from: "her",
       intent: "neutral"
     });
+    if (girl.memory.length > 30) girl.memory.shift();
+
     return { ok: true, effect: "neutral" };
   }
 
@@ -228,6 +356,7 @@
     createGirl,
     analyzeIntent,
     replyFor,
+    replyForWithContext,
     applyMessageImpact,
     maybeRequestMoney,
     onMoneyReceived,
