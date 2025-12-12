@@ -1,14 +1,13 @@
+// app.js
+
 // ====== STATE ======
 const state = {
   day: 1,
   energy: 3,
-  morale: 80,       // 0..150
+  morale: 80,         // 0..150
   money: 250,
   phoneTier: "Premium", // Cheap / Premium / Ultra
-  girlfriend: {
-    name: "Zeynep",
-    affection: 60,   // 0..100
-  },
+  girlfriend: Girls.createGirl({ id: "zeynep", name: "Zeynep" }),
   items: {
     headphones: false,
     laptop: false,
@@ -42,12 +41,11 @@ function updateUI() {
 
   $("phoneTierBadge").textContent = state.phoneTier;
   $("affectionText").textContent = `İlgi: ${state.girlfriend.affection}`;
+  $("chatSub").textContent = state.girlfriend.name;
 }
 
 function applyPassiveBonuses() {
-  // kulaklık moral pasifi
-  if (state.items.headphones) state.morale += 1; // her gün +1 küçük boost
-  // laptop ders verimini ileride kullanacağız
+  if (state.items.headphones) state.morale += 1; // her gün +1
   state.morale = clamp(state.morale, 0, 150);
 }
 
@@ -60,12 +58,14 @@ function spendEnergy(cost = 1) {
   }
 }
 
-function moraleFromRelationship() {
-  // ilişki morale etkisi: affection eşik
+function moraleFromRelationshipAtDayEnd() {
   const a = state.girlfriend.affection;
+
   if (a >= 75) state.morale += 6;
   else if (a >= 55) state.morale += 2;
   else if (a <= 30) state.morale -= 8;
+
+  state.morale = clamp(state.morale, 0, 150);
 }
 
 function doAction(type) {
@@ -77,7 +77,7 @@ function doAction(type) {
     spendEnergy(1);
     const gain = Math.round(4 * moraleMultiplier + (state.items.laptop ? 1 : 0));
     state.morale = clamp(state.morale + 1, 0, 150);
-    log("Ders çalıştın", `Verim: +${gain} (moral çarpanı: x${moraleMultiplier.toFixed(2)})`);
+    log("Ders çalıştın", `Verim: +${gain} (moral x${moraleMultiplier.toFixed(2)})`);
   }
 
   if (type === "sport") {
@@ -102,9 +102,8 @@ function doAction(type) {
       log("Bahis", "Paran yetmedi.");
     } else {
       state.money -= stake;
-      const winChance = 0.35; // temel
-      const roll = Math.random();
-      if (roll < winChance) {
+      const winChance = 0.35;
+      if (Math.random() < winChance) {
         const payout = 150;
         state.money += payout;
         state.morale = clamp(state.morale + 8, 0, 150);
@@ -121,10 +120,12 @@ function doAction(type) {
 
 // ====== DAY END ======
 function endDay() {
-  // günlük ihmal: mesaj atmadıysan affection düşebilir (şimdilik basit)
+  // İhmal: o gün hiç mesaj atmadıysan affection düşsün
+  // Basit kontrol: son 24 saatte "Sen" mesajı yoksa (demo)
+  // (Şimdilik: her gün -2)
   state.girlfriend.affection = clamp(state.girlfriend.affection - 2, 0, 100);
 
-  moraleFromRelationship();
+  moraleFromRelationshipAtDayEnd();
   applyPassiveBonuses();
 
   log("Gün bitti", `Yeni gün: ${state.day + 1} • Enerji yenilendi`);
@@ -161,6 +162,12 @@ function showScreen(name) {
 }
 
 // ====== CHAT ======
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[c]));
+}
+
 function pushChat(fromMe, text) {
   const bubble = document.createElement("div");
   bubble.className = "bubble" + (fromMe ? " me" : "");
@@ -169,21 +176,17 @@ function pushChat(fromMe, text) {
   $("chatBody").scrollTop = $("chatBody").scrollHeight;
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-  }[c]));
-}
+function girlfriendAutoReply(userText) {
+  Girls.applyMessageImpact(state.girlfriend, userText);
 
-function girlfriendAutoReply() {
-  const replies = [
-    "Tamam :)",
-    "Güzel, sonra konuşalım.",
-    "Bugün biraz yoğunum ama iyi ki yazdın.",
-    "İhmal etme beni.",
-  ];
-  const r = replies[Math.floor(Math.random() * replies.length)];
-  pushChat(false, r);
+  const { reply } = Girls.replyFor(state.girlfriend, userText);
+  pushChat(false, reply);
+
+  // Affection → oyuncu morale küçük etki (anlık)
+  if (state.girlfriend.affection >= 75) state.morale = clamp(state.morale + 2, 0, 150);
+  if (state.girlfriend.affection <= 30) state.morale = clamp(state.morale - 2, 0, 150);
+
+  updateUI();
 }
 
 // ====== BUY ======
@@ -206,14 +209,14 @@ function buyItem(key, price) {
     if (state.items.laptop) return log("Market", "Laptop zaten var.");
     state.money -= price;
     state.items.laptop = true;
-    log("Aldın: Laptop", "Ders verimi artacak (sonraki adımda derinleştiririz)");
+    log("Aldın: Laptop", "Ders verimi artacak (sonra derinleşir)");
   }
 
   if (key === "phoneUpgrade") {
     if (state.phoneTier === "Ultra") return log("Market", "Telefon zaten Ultra.");
     state.money -= price;
     state.phoneTier = "Ultra";
-    log("Telefon yükseltildi", "Ultra özellikler açıldı (ek app/event)");
+    log("Telefon yükseltildi", "Ultra özellikler açıldı");
   }
 
   updateUI();
@@ -240,15 +243,18 @@ $("closePhone").addEventListener("click", closePhone);
 $("endDay").addEventListener("click", endDay);
 
 $("textGirlfriend").addEventListener("click", () => {
-  // mesaj atmak ilişkiyi toparlar, moral yükseltir
-  state.girlfriend.affection = clamp(state.girlfriend.affection + 5, 0, 100);
-  state.morale = clamp(state.morale + 3, 0, 150);
-  log("Mesaj attın", `İlgi +5 • Moral +3`);
+  state.girlfriend.affection = clamp(state.girlfriend.affection + 3, 0, 100);
+  state.morale = clamp(state.morale + 2, 0, 150);
+  log("Mesaj attın", `İlgi +3 • Moral +2`);
   updateUI();
 
   showScreen("chat");
-  pushChat(true, "Nasılsın?");
-  setTimeout(girlfriendAutoReply, state.phoneTier === "Cheap" ? 1200 : 500);
+
+  const starter = "Nasılsın?";
+  pushChat(true, starter);
+
+  const delay = state.phoneTier === "Cheap" ? 1200 : 500;
+  setTimeout(() => girlfriendAutoReply(starter), delay);
 });
 
 $("sendChat").addEventListener("click", () => {
@@ -256,27 +262,26 @@ $("sendChat").addEventListener("click", () => {
   const text = input.value.trim();
   if (!text) return;
   input.value = "";
+
   pushChat(true, text);
 
-  // mesaj kalitesi basit: uzun mesaj biraz daha iyi
-  const bonus = text.length >= 12 ? 3 : 1;
+  // Yazdığın mesajın uzunluğu küçük etki
+  const bonus = text.length >= 12 ? 2 : 1;
   state.girlfriend.affection = clamp(state.girlfriend.affection + bonus, 0, 100);
   state.morale = clamp(state.morale + 1, 0, 150);
   updateUI();
 
-  setTimeout(girlfriendAutoReply, state.phoneTier === "Cheap" ? 1200 : 500);
+  const delay = state.phoneTier === "Cheap" ? 1200 : 500;
+  setTimeout(() => girlfriendAutoReply(text), delay);
 });
 
 $("scrollSocial").addEventListener("click", () => {
-  // sosyal medya: kısa moral +, enerji yok ama "zaman" gibi düşün; şimdilik moral
   state.morale = clamp(state.morale + 2, 0, 150);
-  // aşırı kaydırma -> risk: ileride bağımlılık
   log("Sosyal medya", "Moral +2");
   updateUI();
 });
 
 $("placeBet").addEventListener("click", () => {
-  // telefon içinden bahis: premium/ultra hafif avantaj (bildirim/ bilgi)
   const stake = 50;
   if (state.money < stake) return log("Bahis", "Paran yetmedi.");
 
