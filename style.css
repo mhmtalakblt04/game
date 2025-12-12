@@ -197,6 +197,7 @@ h2 { margin: 8px 0 12px; font-size: 18px; }
 .mini-label { font-size: 12px; opacity: .75; }
 .mini-value { font-weight: 800; margin-top: 2px; }
 
+/* Header row */
 .screen-head {
   display: flex;
   align-items: center;
@@ -246,6 +247,66 @@ h2 { margin: 8px 0 12px; font-size: 18px; }
   outline: none;
 }
 
+/* Thread list */
+.threadlist { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.thread {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.thread .left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.thread .name { font-weight: 900; }
+.thread .preview { font-size: 12px; opacity: .8; max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { font-size: 12px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.16); }
+.pill.good { border-color: rgba(110,231,255,.25); }
+.pill.risky { border-color: rgba(255,99,132,.30); }
+
+/* Bank */
+.bankcard {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bc-label { font-size: 12px; opacity: .75; }
+.bc-value { font-size: 20px; font-weight: 900; margin-top: 2px; }
+.sep { height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; }
+.quickpay { display: flex; gap: 8px; flex-wrap: wrap; }
+.paychip {
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  color: inherit;
+  cursor: pointer;
+}
+.payform { display: flex; gap: 8px; }
+.payform select, .payform input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  outline: none;
+}
+
 /* Shop / Social / Bets */
 .shop, .feed, .bets { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
 .shopitem, .post, .betline, .note {
@@ -264,7 +325,6 @@ h2 { margin: 8px 0 12px; font-size: 18px; }
 .note { display: block; font-size: 12px; opacity: .85; line-height: 1.4; }
 .pad { padding: 10px 0; }
 
-/* ====== RESPONSIVE ====== */
 @media (max-width: 900px) {
   .main { grid-template-columns: 1fr; }
   .log { height: 320px; }
