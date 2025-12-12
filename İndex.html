@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LifeSim - UI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ====== TOP BAR: Gün + Statlar ====== -->
+    <header class="topbar">
+      <div class="daybox">
+        <div class="label">GÜN</div>
+        <div id="day" class="value">1</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Enerji</div>
+          <div class="stat-value" id="energy">3</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Moral</div>
+          <div class="stat-value" id="morale">80</div>
+          <div class="bar"><div id="moraleBar" class="fill"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Para</div>
+          <div class="stat-value" id="money">₺250</div>
+        </div>
+      </div>
+
+      <button id="openPhone" class="btn primary">Telefon</button>
+    </header>
+
+    <!-- ====== ANA İÇERİK ====== -->
+    <main class="main">
+      <section class="left">
+        <h2>Bugün ne yapacaksın?</h2>
+
+        <div class="actions">
+          <button class="card" data-action="study">
+            <div class="card-title">Ders Çalış</div>
+            <div class="card-sub">+Akademi • -1 Enerji</div>
+          </button>
+
+          <button class="card" data-action="sport">
+            <div class="card-title">Spor</div>
+            <div class="card-sub">+Fizik • -1 Enerji</div>
+          </button>
+
+          <button class="card" data-action="work">
+            <div class="card-title">Part-time İş</div>
+            <div class="card-sub">+₺ • -1 Enerji</div>
+          </button>
+
+          <button class="card warn" data-action="bet">
+            <div class="card-title">Bahis</div>
+            <div class="card-sub">Riskli • Moral dalgalanır</div>
+          </button>
+        </div>
+
+        <div class="row">
+          <button id="endDay" class="btn ghost">Günü Bitir</button>
+          <div class="hint">Enerji 0 olunca otomatik biter.</div>
+        </div>
+      </section>
+
+      <section class="right">
+        <h2>Günlük Akış</h2>
+        <div id="log" class="log"></div>
+      </section>
+    </main>
+
+    <!-- ====== TELEFON MODAL ====== -->
+    <div id="phoneModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="true"></div>
+
+      <div class="phone">
+        <div class="phone-top">
+          <div class="phone-title">Telefon</div>
+          <div class="phone-status">
+            <span id="phoneTierBadge" class="badge">Premium</span>
+            <button id="closePhone" class="x">✕</button>
+          </div>
+        </div>
+
+        <div class="phone-screen">
+          <!-- Home -->
+          <div id="phoneHome" class="screen">
+            <div class="grid">
+              <button class="appicon" data-open="chat">
+                <div class="icon">💬</div>
+                <div class="name">Mesajlar</div>
+              </button>
+
+              <button class="appicon" data-open="shop">
+                <div class="icon">🛍️</div>
+                <div class="name">Market</div>
+              </button>
+
+              <button class="appicon" data-open="social">
+                <div class="icon">📱</div>
+                <div class="name">Sosyal</div>
+              </button>
+
+              <button class="appicon warn" data-open="bets">
+                <div class="icon">🎲</div>
+                <div class="name">Bahis</div>
+              </button>
+            </div>
+
+            <div class="phone-footer">
+              <div class="mini">
+                <div class="mini-label">Kız Ark.</div>
+                <div class="mini-value" id="affectionText">İlgi: 60</div>
+              </div>
+              <button id="textGirlfriend" class="btn small">Mesaj At</button>
+            </div>
+          </div>
+
+          <!-- Chat -->
+          <div id="screenChat" class="screen hidden">
+            <div class="screen-head">
+              <button class="back" data-back="true">←</button>
+              <div class="screen-title">Mesajlar</div>
+              <div class="screen-sub" id="chatSub">Zeynep</div>
+            </div>
+
+            <div id="chatBody" class="chat"></div>
+
+            <div class="composer">
+              <input id="chatInput" type="text" placeholder="Mesaj yaz..." />
+              <button id="sendChat" class="btn small primary">Gönder</button>
+            </div>
+          </div>
+
+          <!-- Shop -->
+          <div id="screenShop" class="screen hidden">
+            <div class="screen-head">
+              <button class="back" data-back="true">←</button>
+              <div class="screen-title">Market</div>
+              <div class="screen-sub">Elektronik</div>
+            </div>
+
+            <div class="shop">
+              <div class="shopitem">
+                <div>
+                  <div class="si-title">Kulaklık (Noise Cancelling)</div>
+                  <div class="si-sub">Moral +6 (pasif)</div>
+                </div>
+                <button class="btn small" data-buy="headphones" data-price="450">₺450</button>
+              </div>
+
+              <div class="shopitem">
+                <div>
+                  <div class="si-title">Laptop (Orta Segment)</div>
+                  <div class="si-sub">Ders verimi +%10</div>
+                </div>
+                <button class="btn small" data-buy="laptop" data-price="3500">₺3500</button>
+              </div>
+
+              <div class="shopitem">
+                <div>
+                  <div class="si-title">Telefon Yükseltme</div>
+                  <div class="si-sub">Premium → Ultra (ek uygulama)</div>
+                </div>
+                <button class="btn small" data-buy="phoneUpgrade" data-price="5000">₺5000</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Social -->
+          <div id="screenSocial" class="screen hidden">
+            <div class="screen-head">
+              <button class="back" data-back="true">←</button>
+              <div class="screen-title">Sosyal</div>
+              <div class="screen-sub">Kaydır</div>
+            </div>
+
+            <div class="feed">
+              <div class="post">“Kulüp seçmeleri haftaya.”</div>
+              <div class="post">“Sınav haftası yaklaşıyor.”</div>
+              <div class="post">“Zeynep: ‘Bugün nasılsın?’”</div>
+            </div>
+
+            <div class="pad">
+              <button class="btn small" id="scrollSocial">Kaydır (Moral +2, Zaman gider)</button>
+            </div>
+          </div>
+
+          <!-- Bets -->
+          <div id="screenBets" class="screen hidden">
+            <div class="screen-head">
+              <button class="back" data-back="true">←</button>
+              <div class="screen-title">Bahis</div>
+              <div class="screen-sub">Riskli</div>
+            </div>
+
+            <div class="bets">
+              <div class="betline">
+                <div>
+                  <div class="si-title">Kupon: 2 maç</div>
+                  <div class="si-sub">Kazanma şansı: %35</div>
+                </div>
+                <button class="btn small warn" id="placeBet">₺50 Oyna</button>
+              </div>
+
+              <div class="note">
+                Premium telefon hızlı bildirim verir. Ucuz telefonda “geç öğrenme” → ilişki riski.
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /phone-screen -->
+      </div><!-- /phone -->
+    </div><!-- /modal -->
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
